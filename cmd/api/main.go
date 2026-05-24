@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -16,6 +17,14 @@ func main() {
 	}
 
 	router := chi.NewRouter()
+
+	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+			log.Printf("failed to encode health response: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	})
 
 	log.Printf("starting api server on :%s", cfg.HTTPPort)
 
