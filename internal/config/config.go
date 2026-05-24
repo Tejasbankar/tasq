@@ -13,6 +13,7 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBName     string
+	HTTPPort   string
 }
 
 func Load() (Config, error) {
@@ -24,10 +25,15 @@ func Load() (Config, error) {
 		DBUser:     os.Getenv("DB_USER"),
 		DBPassword: os.Getenv("DB_PASSWORD"),
 		DBName:     os.Getenv("DB_NAME"),
+		HTTPPort:   os.Getenv("HTTP_PORT"),
 	}
 
 	if err := validate(cfg); err != nil {
 		return Config{}, err
+	}
+
+	if cfg.HTTPPort == "" {
+		cfg.HTTPPort = "8080"
 	}
 
 	return cfg, nil
