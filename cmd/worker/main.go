@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/Tejasbankar/tasq/internal/config"
 	"github.com/Tejasbankar/tasq/internal/storage"
@@ -22,7 +24,21 @@ func main() {
 
 	defer pool.Close()
 
-	_ = storage.NewTaskRepository(pool)
+	repo := storage.NewTaskRepository(pool)
 
-	log.Print("worker started")
+	for {
+		task, err := repo.GetPendingTask(context.Background())
+
+		if err != nil {
+			log.Fatalf("could not fetch task: %v", err)
+		}
+
+		if task == nil {
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		log.Printf("found task id: %s status: %s", task.ID, task.Status)
+		time.Sleep(2 * time.Second)
+	}
 }
