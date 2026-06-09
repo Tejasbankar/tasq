@@ -25,6 +25,8 @@ func main() {
 		log.Fatalf("Failed to initiate database connection: %v", err)
 	}
 
+	defer pool.Close()
+
 	repo := storage.NewTaskRepository(pool)
 
 	router := chi.NewRouter()
