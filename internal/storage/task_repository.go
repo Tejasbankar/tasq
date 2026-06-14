@@ -65,3 +65,23 @@ func (r *TaskRepository) GetPendingTask(ctx context.Context) (*queue.Task, error
 
 	return task, nil
 }
+
+func (r *TaskRepository) MarkProcessing(ctx context.Context, task queue.Task) error {
+	const query = `Update tasks SET status='processing' WHERE id=$1`
+
+	if _, err := r.pool.Exec(ctx, query, task.ID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *TaskRepository) MarkCompleted(ctx context.Context, task queue.Task) error {
+	const query = `Update tasks SET status='completed' WHERE id=$1`
+
+	if _, err := r.pool.Exec(ctx, query, task.ID); err != nil {
+		return err
+	}
+
+	return nil
+}

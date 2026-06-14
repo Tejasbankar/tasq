@@ -39,6 +39,19 @@ func main() {
 		}
 
 		log.Printf("found task id: %s status: %s", task.ID, task.Status)
+
+		if err := repo.MarkProcessing(context.Background(), *task); err != nil {
+			log.Fatalf("could not update task status: %v", err)
+		}
+
+		log.Printf("marked task %s as processing", task.ID)
+
+		if err := repo.MarkCompleted(context.Background(), *task); err != nil {
+			log.Fatalf("could not update task status: %v", err)
+		}
+
+		log.Printf("marked task %s as completed", task.ID)
+
 		time.Sleep(2 * time.Second)
 	}
 }
