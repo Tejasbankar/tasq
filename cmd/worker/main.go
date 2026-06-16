@@ -27,10 +27,10 @@ func main() {
 	repo := storage.NewTaskRepository(pool)
 
 	for {
-		task, err := repo.GetPendingTask(context.Background())
+		task, err := repo.ClaimTask(context.Background())
 
 		if err != nil {
-			log.Fatalf("could not fetch task: %v", err)
+			log.Fatalf("could not claim a task: %v", err)
 		}
 
 		if task == nil {
@@ -38,13 +38,7 @@ func main() {
 			continue
 		}
 
-		log.Printf("found task id: %s status: %s", task.ID, task.Status)
-
-		if err := repo.MarkProcessing(context.Background(), *task); err != nil {
-			log.Fatalf("could not update task status: %v", err)
-		}
-
-		log.Printf("marked task %s as processing", task.ID)
+		log.Printf("claimed task with id: %s", task.ID)
 
 		if err := repo.MarkCompleted(context.Background(), *task); err != nil {
 			log.Fatalf("could not update task status: %v", err)

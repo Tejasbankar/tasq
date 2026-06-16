@@ -37,8 +37,17 @@ func (r *TaskRepository) Create(ctx context.Context, task queue.Task) error {
 	return nil
 }
 
-func (r *TaskRepository) GetPendingTask(ctx context.Context) (*queue.Task, error) {
-	const query = `
+func (r *TaskRepository) ClaimTask(ctx context.Context) (*queue.Task, error) {
+	tx, err := r.pool.Begin(ctx)
+	task := &queue.Task{}
+
+	if err != nil {
+		return task, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	const fetchQuery = `
 	SELECT
 		id,
 		type,
@@ -49,31 +58,42 @@ func (r *TaskRepository) GetPendingTask(ctx context.Context) (*queue.Task, error
 		updated_at
 	FROM tasks
 	WHERE status='pending'
+	ORDER BY created_at
+	FOR UPDATE SKIP LOCKED
 	LIMIT 1
 	`
 
-	row := r.pool.QueryRow(ctx, query)
-	task := &queue.Task{}
-	err := row.Scan(&task.ID, &task.Type, &task.Payload, &task.Status, &task.RetryCount, &task.CreatedAt, &task.UpdatedAt)
+	row := tx.QueryRow(ctx, fetchQuery)
+	err = row.Scan(&task.ID, &task.Type, &task.Payload, &task.Status, &task.RetryCount, &task.CreatedAt, &task.UpdatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return &queue.Task{}, err
+		return nil, err
 	}
 
-	return task, nil
-}
+	const updateQuery = `
+	Update tasks
+	SET status='processing',
+	updated_at=NOW()
+	WHERE id=$1
+	`
+	_, err = tx.Exec(ctx, updateQuery, task.ID)
 
-func (r *TaskRepository) MarkProcessing(ctx context.Context, task queue.Task) error {
-	const query = `Update tasks SET status='processing', updated_at=NOW() WHERE id=$1`
-
-	if _, err := r.pool.Exec(ctx, query, task.ID); err != nil {
-		return err
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	err = tx.Commit(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	task.Status = queue.StatusProcessing
+
+	return task, err
 }
 
 func (r *TaskRepository) MarkCompleted(ctx context.Context, task queue.Task) error {
