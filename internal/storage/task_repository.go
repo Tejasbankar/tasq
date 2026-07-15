@@ -37,12 +37,15 @@ func (r *TaskRepository) Create(ctx context.Context, task queue.Task) error {
 	return nil
 }
 
-func (r *TaskRepository) ClaimTask(ctx context.Context) (*queue.Task, error) {
+func (r *TaskRepository) ClaimTask(ctx context.Context, supportedTypes []string) (*queue.Task, error) {
+	if len(supportedTypes) == 0 {
+		return nil, errors.New("supported types are required to claim task")
+	}
+
 	tx, err := r.pool.Begin(ctx)
-	task := &queue.Task{}
 
 	if err != nil {
-		return task, err
+		return nil, err
 	}
 
 	defer tx.Rollback(ctx)
@@ -58,12 +61,14 @@ func (r *TaskRepository) ClaimTask(ctx context.Context) (*queue.Task, error) {
 		updated_at
 	FROM tasks
 	WHERE status='pending'
+	AND type = ANY($1)
 	ORDER BY created_at
 	FOR UPDATE SKIP LOCKED
 	LIMIT 1
 	`
 
-	row := tx.QueryRow(ctx, fetchQuery)
+	task := &queue.Task{}
+	row := tx.QueryRow(ctx, fetchQuery, supportedTypes)
 	err = row.Scan(&task.ID, &task.Type, &task.Payload, &task.Status, &task.RetryCount, &task.CreatedAt, &task.UpdatedAt)
 
 	if err != nil {

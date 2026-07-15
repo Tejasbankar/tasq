@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"time"
 
 	"github.com/Tejasbankar/tasq/internal/config"
 	"github.com/Tejasbankar/tasq/internal/queue"
@@ -41,26 +40,5 @@ func main() {
 		log.Fatalf("Failed to register send_email handler: %v", err)
 	}
 
-	for {
-		task, err := repo.ClaimTask(context.Background())
-
-		if err != nil {
-			log.Fatalf("could not claim a task: %v", err)
-		}
-
-		if task == nil {
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-		log.Printf("claimed task with id: %s", task.ID)
-
-		if err := repo.MarkCompleted(context.Background(), *task); err != nil {
-			log.Fatalf("could not update task status: %v", err)
-		}
-
-		log.Printf("marked task %s as completed", task.ID)
-
-		time.Sleep(2 * time.Second)
-	}
+	w.Start(context.Background())
 }
