@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/Tejasbankar/tasq/internal/queue"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -101,10 +102,20 @@ func (r *TaskRepository) ClaimTask(ctx context.Context, supportedTypes []string)
 	return task, err
 }
 
-func (r *TaskRepository) MarkCompleted(ctx context.Context, task queue.Task) error {
+func (r *TaskRepository) MarkCompleted(ctx context.Context, taskID uuid.UUID) error {
 	const query = `Update tasks SET status='completed', updated_at=NOW() WHERE id=$1`
 
-	if _, err := r.pool.Exec(ctx, query, task.ID); err != nil {
+	if _, err := r.pool.Exec(ctx, query, taskID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *TaskRepository) MarkFailed(ctx context.Context, taskID uuid.UUID) error {
+	const query = `Update tasks SET status='failed', updated_at=NOW() WHERE id=$1`
+
+	if _, err := r.pool.Exec(ctx, query, taskID); err != nil {
 		return err
 	}
 

@@ -56,19 +56,29 @@ func (w *Worker) Start(ctx context.Context) error {
 
 		handler, ok := w.registry.Get(task.Type)
 		if !ok {
-			log.Printf("no handler registered for task type %q", task.Type)
+			log.Printf("could not find a suitable handler for task %s type %q", task.ID, task.Type)
+
+			if err := w.repo.MarkFailed(ctx, task.ID); err != nil {
+				log.Printf("could not mark task %s as failed: %v", task.ID, err)
+			}
+
 			time.Sleep(w.pollInterval)
 			continue
 		}
 
 		if err := handler(ctx, *task); err != nil {
-			log.Printf("handler execution failed %v", err)
+			log.Printf("task %s failed: %v", task.ID, err)
+
+			if err := w.repo.MarkFailed(ctx, task.ID); err != nil {
+				log.Printf("could not mark task %s as failed: %v", task.ID, err)
+			}
+
 			time.Sleep(w.pollInterval)
 			continue
 		}
 
-		if err := w.repo.MarkCompleted(ctx, *task); err != nil {
-			log.Printf("could not update task status: %v", err)
+		if err := w.repo.MarkCompleted(ctx, task.ID); err != nil {
+			log.Printf("could not mark task %s as completed: %v", err)
 			time.Sleep(w.pollInterval)
 			continue
 		}
