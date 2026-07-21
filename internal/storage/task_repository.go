@@ -121,3 +121,13 @@ func (r *TaskRepository) MarkFailed(ctx context.Context, taskID uuid.UUID) error
 
 	return nil
 }
+
+func (r *TaskRepository) RetryTask(ctx context.Context, taskID uuid.UUID) error {
+	const query = `Update tasks SET status='pending', retry_count=retry_count + 1, updated_at=NOW() WHERE id=$1`
+
+	if _, err := r.pool.Exec(ctx, query, taskID); err != nil {
+		return err
+	}
+
+	return nil
+}
