@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/Tejasbankar/tasq/internal/config"
 	"github.com/Tejasbankar/tasq/internal/queue"
@@ -66,12 +67,19 @@ func main() {
 			return
 		}
 
+		runAt := time.Now()
+
+		if req.RunAt != nil {
+			runAt = *req.RunAt
+		}
+
 		task := queue.Task{
 			ID:         uuid.New(),
 			Type:       req.Type,
 			Payload:    req.Payload,
 			Status:     queue.StatusPending,
 			RetryCount: 0,
+			RunAt:      runAt,
 		}
 
 		if err := repo.Create(r.Context(), task); err != nil {

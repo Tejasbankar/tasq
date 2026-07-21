@@ -3,11 +3,13 @@ package queue
 import (
 	"encoding/json"
 	"errors"
+	"time"
 )
 
 type CreateTaskRequest struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
+	RunAt   *time.Time      `json:"run_at,omitempty"`
 }
 
 func (r CreateTaskRequest) Validate() error {

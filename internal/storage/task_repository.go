@@ -21,7 +21,7 @@ func NewTaskRepository(pool *pgxpool.Pool) *TaskRepository {
 }
 
 func (r *TaskRepository) Create(ctx context.Context, task queue.Task) error {
-	const query = "INSERT INTO tasks(id, type, payload, status, retry_count) VALUES($1, $2, $3, $4, $5)"
+	const query = "INSERT INTO tasks(id, type, payload, status, retry_count, run_at) VALUES($1, $2, $3, $4, $5, $6)"
 
 	if _, err := r.pool.Exec(
 		ctx,
@@ -31,6 +31,7 @@ func (r *TaskRepository) Create(ctx context.Context, task queue.Task) error {
 		task.Payload,
 		task.Status,
 		task.RetryCount,
+		task.RunAt,
 	); err != nil {
 		return err
 	}
@@ -59,18 +60,20 @@ func (r *TaskRepository) ClaimTask(ctx context.Context, supportedTypes []string)
 		status,
 		retry_count,
 		created_at,
-		updated_at
+		updated_at,
+		run_at
 	FROM tasks
 	WHERE status='pending'
 	AND type = ANY($1)
-	ORDER BY created_at
+	AND run_at <= NOW()
+	ORDER BY run_at, created_at
 	FOR UPDATE SKIP LOCKED
 	LIMIT 1
 	`
 
 	task := &queue.Task{}
 	row := tx.QueryRow(ctx, fetchQuery, supportedTypes)
-	err = row.Scan(&task.ID, &task.Type, &task.Payload, &task.Status, &task.RetryCount, &task.CreatedAt, &task.UpdatedAt)
+	err = row.Scan(&task.ID, &task.Type, &task.Payload, &task.Status, &task.RetryCount, &task.CreatedAt, &task.UpdatedAt, &task.RunAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

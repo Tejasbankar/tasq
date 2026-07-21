@@ -24,4 +24,5 @@ type Task struct {
 	RetryCount int             `json:"retry_count"`
 	CreatedAt  time.Time       `json:"created_at"`
 	UpdatedAt  time.Time       `json:"updated_at"`
+	RunAt      time.Time       `json:"run_at"`
 }
